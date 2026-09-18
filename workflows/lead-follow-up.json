@@ -1,0 +1,341 @@
+{
+  "name": "Lead Follow-Up Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8b799354-9947-4a5d-9419-f987219cb62f",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Lead Intake",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1218397609,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "ed9c00e7-b768-4afd-89aa-6195a758049c",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst results = [];\n\nfor (const item of $input.all()) {\n  const lead = item.json;\n\n  // Blank status means New for older records\n  const status = String(lead[\"Status\"] || \"New\")\n    .trim()\n    .toLowerCase();\n\n  const lastFollowUpValue = String(\n    lead[\"Last Follow-Up Sent\"] || \"\"\n  ).trim();\n\n  const rawCount = lead[\"Follow-Up Count\"];\n\n  // Existing leads that already received a reminder count as reminder #1\n  let followUpCount;\n\n  if (\n    rawCount === \"\" ||\n    rawCount === undefined ||\n    rawCount === null\n  ) {\n    followUpCount = lastFollowUpValue ? 1 : 0;\n  } else {\n    followUpCount = Number(rawCount);\n  }\n\n  // Stop after 3 automated reminders\n  if (followUpCount >= 3) {\n    continue;\n  }\n\n  // Ignore completed leads\n  if (status === \"won\" || status === \"lost\") {\n    continue;\n  }\n\n  let needsFollowUp = false;\n  let reason = \"\";\n\n  // NEW leads\n  if (status === \"new\") {\n    const received = new Date(lead[\"Date Received\"]);\n\n    if (!isNaN(received.getTime())) {\n      const hoursSinceReceived =\n        (now - received) / (1000 * 60 * 60);\n\n      // First reminder after 24 hours\n      if (followUpCount === 0 && hoursSinceReceived >= 24) {\n        needsFollowUp = true;\n        reason =\n          \"New lead has not been contacted within 24 hours\";\n      }\n\n      // Reminder #2/#3 every 3 days\n      else if (\n        followUpCount > 0 &&\n        lastFollowUpValue\n      ) {\n        const lastFollowUp =\n          new Date(lastFollowUpValue);\n\n        if (!isNaN(lastFollowUp.getTime())) {\n          const daysSinceFollowUp =\n            (now - lastFollowUp) /\n            (1000 * 60 * 60 * 24);\n\n          if (daysSinceFollowUp >= 3) {\n            needsFollowUp = true;\n            reason =\n              \"New lead still needs follow-up after previous reminder\";\n          }\n        }\n      }\n    }\n  }\n\n  // CONTACTED leads\n  if (status === \"contacted\") {\n    const contacted = new Date(lead[\"Last Contacted\"]);\n\n    if (!isNaN(contacted.getTime())) {\n      const daysSinceContact =\n        (now - contacted) /\n        (1000 * 60 * 60 * 24);\n\n      // First reminder after 3 days\n      if (followUpCount === 0 && daysSinceContact >= 3) {\n        needsFollowUp = true;\n        reason =\n          \"Lead has not been followed up for 3 days\";\n      }\n\n      // Later reminders every 7 days\n      else if (\n        followUpCount > 0 &&\n        lastFollowUpValue\n      ) {\n        const lastFollowUp =\n          new Date(lastFollowUpValue);\n\n        if (!isNaN(lastFollowUp.getTime())) {\n          const daysSinceFollowUp =\n            (now - lastFollowUp) /\n            (1000 * 60 * 60 * 24);\n\n          if (daysSinceFollowUp >= 7) {\n            needsFollowUp = true;\n            reason =\n              \"Contacted lead still needs follow-up after previous reminder\";\n          }\n        }\n      }\n    }\n  }\n\n  if (needsFollowUp) {\n    results.push({\n      json: {\n        ...lead,\n        follow_up_reason: reason,\n        follow_up_count: followUpCount + 1\n      }\n    });\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "3f0120a7-71a8-4fed-9e8a-859872266778",
+      "name": "Find Leads Needing Follow-Up",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendTo": "portfolio@example.com",
+        "subject": "=Follow-Up Reminder — {{ $json[\"Customer Name\"] }}",
+        "emailType": "text",
+        "message": "=FOLLOW-UP REMINDER #{{ $json.follow_up_count }}\n\nThis lead needs attention:  \n\nCustomer: {{ $json[\"Customer Name\"] }} \nEmail: {{ $json.Email }} \nService: {{ $json.Service }} \nProperty Type: {{ $json[\"Property Type\"] }} \nUrgency: {{ $json.Urgency }} \nLead Score: {{ $json[\"Lead Score\"] }} \nLead Temperature: {{ $json[\"Lead Temperature\"] }}\n\nReason: {{ $json.follow_up_reason }}  \n\nSummary: {{ $json.Summary }}  \n\nStatus: {{ $json[\"Status\"] || \"New\" }}\n\nPlease review and follow up with this lead.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "c061ed5f-6098-46e3-8dcf-2fe7d4430dda",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Lead Intake",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1218397609,
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Find Leads Needing Follow-Up').all()[$itemIndex].json[\"Email\"] }}",
+            "Last Follow-Up Sent": "={{ $now }}",
+            "Follow-Up Count": "={{ $('Find Leads Needing Follow-Up').item.json.follow_up_count }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Lead Temperature",
+              "displayName": "Lead Temperature",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score Breakdown",
+              "displayName": "Score Breakdown",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Date Received",
+              "displayName": "Date Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Last Contacted",
+              "displayName": "Last Contacted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Last Follow-Up Sent",
+              "displayName": "Last Follow-Up Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-Up Count",
+              "displayName": "Follow-Up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ],
+      "id": "ab05255d-337a-480a-9a99-4472abb7b13a",
+      "name": "Update row in sheet"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Find Leads Needing Follow-Up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Leads Needing Follow-Up": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "notesInFlow": false
+}
