@@ -1,0 +1,523 @@
+{
+  "name": "AI Lead Intake",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        16,
+        0
+      ],
+      "id": "f1e5e1f1-dceb-474d-a522-34549f6e2a8f",
+      "name": "Webhook",
+      "webhookId": "SANITIZED_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1504,
+        -16
+      ],
+      "id": "c2973b78-949f-4d6f-9eae-804700a5ca32",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{\n  \"Analyze this incoming lead:\\n\\n\" +\n  \"Name: \" + $json.body.name + \"\\n\" +\n  \"Email: \" + $json.body.email + \"\\n\" +\n  \"Message: \" + $json.body.message\n}}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an AI lead intake assistant for a residential roofing company.\n\nYour job is to read an incoming customer lead and extract factual sales information.\n\nReturn ONLY valid JSON using EXACTLY this structure:\n\n{\n  \"customer_name\": \"\",\n  \"email\": \"\",\n  \"service\": \"\",\n  \"property_type\": \"\",\n  \"urgency\": \"\",\n  \"has_active_leak\": false,\n  \"has_damage\": false,\n  \"requests_estimate\": false,\n  \"has_specific_timeframe\": false,\n  \"comparing_options\": false,\n  \"just_researching\": false,\n  \"summary\": \"\"\n}\n\nIMPORTANT:\nEvery field above MUST appear in your response.\nNever omit a field.\nNever add additional fields.\nUse \"Unknown\" when a text field cannot be determined from the lead.\n\nTEXT FIELD RULES:\n\n1. customer_name\nExtract the customer's name from the lead.\nUse \"Unknown\" if unavailable.\n\n2. email\nExtract the customer's email address.\nUse \"Unknown\" if unavailable.\n\n3. service\nIdentify the roofing service the customer is asking about.\nExamples:\n- Roof Replacement\n- Roof Repair\n- Roof Inspection\n- Storm Damage Repair\n- Shingle Replacement\nUse \"Unknown\" if the service cannot be determined.\n\n4. property_type\nIdentify the type of property ONLY when supported by the lead.\nExamples:\n- Residential\n- Commercial\n- Apartment\n- Townhouse\n- Single-Family Home\n- Multi-Family\nUse \"Unknown\" when the property type is not explicitly stated or cannot be reliably inferred.\n\nDo NOT assume that \"my roof\" means Residential.\n\n5. urgency\n\nClassify urgency using ONLY the following rules.\n\nReturn exactly one of:\n\"Immediate\", \"High\", \"Medium\", \"Low\", \"Unknown\"\n\nImmediate:\n- The customer reports an active leak, water intrusion, severe damage, or an emergency.\n- Current conditions require prompt attention.\n\nHigh:\n- The customer wants an estimate, inspection, repair, or other action within approximately 7 days.\n- The customer describes an active roofing problem that needs prompt attention even if it is not an emergency.\n\nMedium:\n- The customer gives a future timeframe such as:\n  \"this summer\"\n  \"this fall\"\n  \"this winter\"\n  \"next month\"\n  \"within a few months\"\n  \"later this year\"\n- The customer is actively considering the project and requests pricing, an estimate, or information about options.\n\nLow:\n- The customer is casually considering a project with NO stated timeframe AND no clear current purchase intent.\n- The customer is primarily browsing or researching.\n\nUnknown:\n- There is not enough information to classify urgency.\n\nIMPORTANT:\n- A future timeframe such as \"this summer\" MUST NOT be classified as Low.\n- A customer asking for an estimate is evidence of active purchase intent.\n- A customer asking for options is evidence of active purchase intent.\n- Do not use \"Low\" when the customer has both a future timeframe and an estimate request.\n\n6. has_active_leak\ntrue only when the customer explicitly mentions a current leak, water leak, water intrusion, or similar active problem.\nOtherwise false.\n\n7. has_damage\ntrue when the customer explicitly mentions damaged, missing, broken, cracked, deteriorated, or defective roofing.\nOtherwise false.\n\n8. requests_estimate\ntrue when the customer asks for an estimate, quote, price, pricing, cost, or similar information about the project.\nOtherwise false.\n\n9. has_specific_timeframe\ntrue when the customer gives any identifiable timeframe or deadline.\nExamples:\n- this summer\n- this fall\n- this year\n- next week\n- next month\n- within 30 days\n- in June\n- by December\n- before winter\n\nA future season, month, week, or deadline counts as a timeframe.\nOtherwise false.\n\n10. comparing_options\ntrue when the customer asks about options, alternatives, materials, solutions, or available choices.\nOtherwise false.\n\n11. just_researching\ntrue only when the customer clearly indicates they are only researching or gathering information without current intent to pursue the project.\nExamples:\n- just curious\n- just researching\n- maybe someday\n- not planning to do this\n\nDo not mark true simply because the project is planned for the future.\nOtherwise false.\n\n12. summary\nWrite a short factual summary of the customer's situation and intent.\nDo not invent information.\n\nFINAL RULES:\n- Every field in the JSON structure is required.\n- Use true or false for all signal fields.\n- Do not calculate lead_score.\n- Do not assign HOT, WARM, or COLD.\n- Do not invent information.\n- Do not infer property type without evidence.\n- Use \"Unknown\" when information is unavailable.\n- Return valid JSON only.\n- Do not use markdown.\n- Do not use code fences.\n- Do not include explanations."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        176,
+        0
+      ],
+      "id": "d9418cda-ef68-40bd-9969-3c6b6f1c1ae4",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "qwen3:8b",
+        "options": {
+          "think": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        176,
+        192
+      ],
+      "id": "e99ef04c-b9a1-4b23-8334-53536a611595",
+      "name": "Ollama Chat Model"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Lead Intake",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "YOUR_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Customer Name": "={{ $('Code in JavaScript').item.json.customer_name }}",
+            "Email": "={{ $('Code in JavaScript').item.json.email }}",
+            "Service": "={{ $('Code in JavaScript').item.json.service }}",
+            "Property Type": "={{ $('Code in JavaScript').item.json.property_type }}",
+            "Urgency": "={{ $('Code in JavaScript').item.json.urgency }}",
+            "Lead Score": "={{ $('Code in JavaScript').item.json.lead_score }}",
+            "Lead Temperature": "={{ $('Code in JavaScript').item.json.lead_temperature }}",
+            "Summary": "={{ $('Code in JavaScript').item.json.summary }}",
+            "Date Received": "={{ $now }}",
+            "Score Breakdown": "={{ $('Code in JavaScript').item.json.score_breakdown }}",
+            "Status": "New"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Customer Name",
+              "displayName": "Customer Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Service",
+              "displayName": "Service",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Score",
+              "displayName": "Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Temperature",
+              "displayName": "Lead Temperature",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score Breakdown",
+              "displayName": "Score Breakdown",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date Received",
+              "displayName": "Date Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Contacted",
+              "displayName": "Last Contacted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1280,
+        96
+      ],
+      "id": "a20fa026-4093-4c79-a0e9-4cff2f678feb",
+      "name": "Append row in sheet"
+    },
+    {
+      "parameters": {
+        "sendTo": "portfolio@example.com",
+        "subject": "=HOT LEAD — {{ $json.customer_name }} — Score {{ $json.lead_score }}",
+        "emailType": "text",
+        "message": "=HOT LEAD ALERT\n\nA new lead has been automatically classified as HOT.\n\nCUSTOMER\nName: {{ $('Code in JavaScript').item.json.customer_name }}\nEmail: {{ $('Code in JavaScript').item.json.email }}\n\nPROJECT\nService: {{ $('Code in JavaScript').item.json.service }}\nProperty Type: {{ $('Code in JavaScript').item.json.property_type }}\n\nQUALIFICATION\nLead Score: {{ $('Code in JavaScript').item.json.lead_score }}/100\nLead Temperature: {{ $('Code in JavaScript').item.json.lead_temperature }}\nUrgency: {{ $('Code in JavaScript').item.json.urgency }}\n\nREASON\n{{ $('Code in JavaScript').item.json.score_breakdown }}\n\nSUMMARY\n{{ $('Code in JavaScript').item.json.summary }}\n\nRECOMMENDED ACTION\nReview this lead and contact the customer based on the stated urgency.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "bf68ebec-b05d-421d-b88a-52a2c321a565",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "AI Lead Intake",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "YOUR_SHEET_GID",
+          "mode": "list",
+          "cachedResultName": "Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=YOUR_SHEET_GID"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $('Code in JavaScript').item.json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        656,
+        0
+      ],
+      "id": "c6c5be28-84d3-4547-baaf-1b9ca709af23",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f80bba20-b23c-4746-b5f4-8f64d203e90b",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        848,
+        0
+      ],
+      "id": "5c59b246-ed40-4e53-85f1-c9d5e3fddf88",
+      "name": "IF - Duplicate Lead?",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      status: \"duplicate\",\n      message: \"Duplicate lead detected. Lead was not added again.\"\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -144
+      ],
+      "id": "37f00685-a836-444b-8709-b877a75972ae",
+      "name": "Duplicate Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ca599244-8a58-40b6-9f4b-ed25b75239a2",
+              "leftValue": "={{ $('Code in JavaScript').item.json.lead_score }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        128
+      ],
+      "id": "08b9fcee-ebf1-4cd3-ba23-88d92bc93958",
+      "name": "IF - Hot Lead?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json.text;\n\nlet lead;\n\ntry {\n  lead = JSON.parse(raw);\n} catch (error) {\n  throw new Error(\"AI response was not valid JSON: \" + raw);\n}\n\n// Get the original customer message from the Webhook\nconst originalMessage =\n  $('Webhook').item.json.body.message || '';\n\nconst message = originalMessage.toLowerCase();\n\n// Deterministic timeframe detection\nconst timeframePatterns = [\n  /\\bas soon as possible\\b/,\n  /\\basap\\b/,\n  /\\bimmediately\\b/,\n  /\\bright away\\b/,\n  /\\bnow\\b/,\n  /\\btoday\\b/,\n  /\\btomorrow\\b/,\n  /\\bwithin\\s+\\w+\\s+(day|days|week|weeks|month|months)\\b/,\n  /\\bnext\\s+(day|week|month|year)\\b/,\n  /\\bthis\\s+(week|month|summer|fall|winter|spring|year)\\b/,\n  /\\bin\\s+(january|february|march|april|may|june|july|august|september|october|november|december)\\b/,\n  /\\bby\\s+\\w+\\b/\n];\n\nif (timeframePatterns.some(pattern => pattern.test(message))) {\n  lead.has_specific_timeframe = true;\n}\n\n// Deterministic lead score\nlet score = 0;\n\nif (lead.has_active_leak) score += 25;\nif (lead.has_damage) score += 15;\nif (lead.requests_estimate) score += 25;\nif (lead.has_specific_timeframe) score += 20;\nif (lead.comparing_options) score += 15;\nif (lead.just_researching) score += 5;\n\nscore = Math.max(0, Math.min(100, score));\n\n// Determine temperature\nlet temperature;\n\nif (score >= 80) {\n  temperature = \"HOT\";\n} else if (score >= 50) {\n  temperature = \"WARM\";\n} else {\n  temperature = \"COLD\";\n}\n\nlead.lead_score = score;\nlead.lead_temperature = temperature;\n\n// Score breakdown\nconst reasons = [];\n\nif (lead.has_active_leak) reasons.push(\"Active leak (+25)\");\nif (lead.has_damage) reasons.push(\"Roof damage (+15)\");\nif (lead.requests_estimate) reasons.push(\"Estimate requested (+25)\");\nif (lead.has_specific_timeframe) reasons.push(\"Specific timeframe (+20)\");\nif (lead.comparing_options) reasons.push(\"Comparing options (+15)\");\nif (lead.just_researching) reasons.push(\"Researching (+5)\");\n\nlead.score_breakdown = reasons.join(\", \");\n\nreturn [\n  {\n    json: lead\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        0
+      ],
+      "id": "172e53a4-806d-44d4-ab07-de972e8c3930",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "IF - Duplicate Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Duplicate Lead?": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF - Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "tags": []
+}
