@@ -47,7 +47,7 @@ Duplicate?
      │
      └── NO → Google Sheets
 ```
-## Follow-Up Workflow
+### Follow-Up Workflow
 ```text
 Schedule Trigger
       ↓
