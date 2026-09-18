@@ -20,6 +20,7 @@ The workflow receives a roofing lead through a webhook and automatically:
 ## Architecture
 
 ### Lead Intake Workflow
+![Lead Intake Workflow](screenshots/lead-intake-workflow.png)
 
 ```text
 Customer Lead
@@ -48,6 +49,7 @@ Duplicate?
      └── NO → Google Sheets
 ```
 ### Follow-Up Workflow
+![Follow-Up Workflow](screenshots/follow-up-workflow.png)
 ```text
 Schedule Trigger
       ↓
@@ -107,6 +109,7 @@ Example scoring rules:
 The workflow also generates a score breakdown so the classification is explainable.
 
 ## Duplicate Detection
+![Duplicate Detection](screenshots/duplicate-detection.png)
 
 Before creating a new lead, the workflow checks the customer's email address against existing Google Sheets records.
 
@@ -118,6 +121,7 @@ Duplicate detected
 → Duplicate response returned
 ```
 ## HOT Lead Notification
+![HOT Lead Notification](screenshots/gmail-hot-lead.png)
 When a lead scores 80 or higher, Gmail sends a notification containing:
 - Customer information
 - Service
@@ -129,6 +133,7 @@ When a lead scores 80 or higher, Gmail sends a notification containing:
 - Lead summary
 
 ## Lead Management
+![Google Sheets Lead Database](screenshots/google-sheets-leads.png)
 The Google Sheet stores:
 ```text
 Customer Name
