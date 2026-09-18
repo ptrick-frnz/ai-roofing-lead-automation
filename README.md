@@ -84,14 +84,11 @@ The workflow extracts:
 
 The model is instructed to return structured JSON and use Unknown when information is unavailable.
 
-Lead Scoring
+## Lead Scoring
 
 The final score is calculated by n8n rather than relying on the LLM.
 
 Example scoring rules:
-
-## Lead Scoring
-
 | Signal | Points |
 |---|---:|
 | Active leak | +25 |
@@ -101,7 +98,7 @@ Example scoring rules:
 | Comparing options | +15 |
 | Researching | +5 |
 
-## Lead Temperature:
+### Lead Temperature:
 ```text
 80–100 → HOT
 50–79  → WARM
@@ -149,7 +146,7 @@ Last Contacted
 Last Follow-Up Sent
 Follow-Up Count
 ```
-Status values:
+### Status values:
 ```text
 New
 Contacted
